@@ -1,7 +1,5 @@
 package org.guru.Tp0;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -16,36 +14,52 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-public class Q00 {
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+public class Question1_7 {
 
     public static class MyMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
+
+        private Map<String, Integer> inMapperCombiner;
+
+        @Override
+        protected void setup(Context context) throws IOException, InterruptedException {
+            super.setup(context);
+            inMapperCombiner = new HashMap<>();
+        }
+
         @Override
         protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-            for(String stringLoop : value.toString().split(" ")) {
+            for (String stringLoop : value.toString().split(" ")) {
                 stringLoop = stringLoop.replaceAll("\\s*,\\s*$", "");
                 stringLoop = stringLoop.trim();
-                context.write(new Text(stringLoop), new IntWritable(1));
+
+                inMapperCombiner.merge(stringLoop, 1, Integer::sum);
             }
+        }
+
+        @Override
+        protected void cleanup(Context context) throws IOException, InterruptedException {
+            for (Map.Entry<String, Integer> entry : inMapperCombiner.entrySet()) {
+                context.write(new Text(entry.getKey()), new IntWritable(entry.getValue()));
+            }
+            super.cleanup(context);
         }
     }
 
     public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-        private int maxCount = Integer.MIN_VALUE;
-
         @Override
         protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
 
             int sum = 0;
+
             for (IntWritable value : values) {
                 sum += value.get();
             }
 
-            if (sum > maxCount) {
-                maxCount = sum;
-
-                context.write(key, new IntWritable(sum));
-            }
-
+            context.write(key, new IntWritable(sum));
         }
     }
 
@@ -55,8 +69,8 @@ public class Q00 {
         String input = otherArgs[0];
         String output = otherArgs[1];
 
-        Job job = Job.getInstance(conf, "Question0_0");
-        job.setJarByClass(Q00.class);
+        Job job = Job.getInstance(conf, "Question1_7");
+        job.setJarByClass(Question1_7.class);
 
         job.setMapperClass(MyMapper.class);
         job.setMapOutputKeyClass(Text.class);
@@ -65,8 +79,6 @@ public class Q00 {
         job.setReducerClass(MyReducer.class);
         job.setOutputKeyClass(Text.class);
         job.setOutputValueClass(IntWritable.class);
-
-        job.setNumReduceTasks(3);
 
         FileInputFormat.addInputPath(job, new Path(input));
         job.setInputFormatClass(TextInputFormat.class);

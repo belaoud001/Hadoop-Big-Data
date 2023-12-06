@@ -1,7 +1,5 @@
 package org.guru.Tp0;
 
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
@@ -16,7 +14,9 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
-public class Q00 {
+import java.io.IOException;
+
+public class Question1_6 {
 
     public static class MyMapper extends Mapper<LongWritable, Text, Text, IntWritable> {
         @Override
@@ -29,23 +29,30 @@ public class Q00 {
         }
     }
 
-    public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
-        private int maxCount = Integer.MIN_VALUE;
-
+    public static class MyCombiner extends Reducer<Text, IntWritable, Text, IntWritable> {
         @Override
         protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
-
             int sum = 0;
+
             for (IntWritable value : values) {
                 sum += value.get();
             }
 
-            if (sum > maxCount) {
-                maxCount = sum;
+            context.write(key, new IntWritable(sum));
+        }
+    }
 
-                context.write(key, new IntWritable(sum));
+    public static class MyReducer extends Reducer<Text, IntWritable, Text, IntWritable> {
+        @Override
+        protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+
+            int sum = 0;
+
+            for (IntWritable value : values) {
+                sum += value.get();
             }
 
+            context.write(key, new IntWritable(sum));
         }
     }
 
@@ -55,12 +62,14 @@ public class Q00 {
         String input = otherArgs[0];
         String output = otherArgs[1];
 
-        Job job = Job.getInstance(conf, "Question0_0");
-        job.setJarByClass(Q00.class);
+        Job job = Job.getInstance(conf, "Question1_6");
+        job.setJarByClass(Question1_6.class);
 
         job.setMapperClass(MyMapper.class);
         job.setMapOutputKeyClass(Text.class);
         job.setMapOutputValueClass(IntWritable.class);
+
+        job.setCombinerClass(MyCombiner.class);
 
         job.setReducerClass(MyReducer.class);
         job.setOutputKeyClass(Text.class);
