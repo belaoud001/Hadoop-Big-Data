@@ -1,0 +1,1 @@
+hadoop jar all_tp.jar org.guru.Tp.partie1.Question1_7 /data/miserables wordcount_1_7

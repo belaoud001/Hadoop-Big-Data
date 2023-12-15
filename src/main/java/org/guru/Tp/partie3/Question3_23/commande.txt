@@ -1,0 +1,1 @@
+hadoop jar all_tp.jar org.guru.Tp.partie3.Question3_23 /data/flickr.txt flickr_3_23
